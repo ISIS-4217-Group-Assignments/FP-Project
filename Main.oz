@@ -202,31 +202,34 @@ fun {GetId Rec}
     Rec.id
 end
 
-fun {ExecutionGraph Body OpCounter}
+fun {IsApplication Rec}
+    Rec.kind == 'application'
+end
+
+fun {ExecutionGraph Body OpCounter LastTraversed}
     case Body of nil then graph(nodes: nil edges: nil)
     [] Val|Rest then
     Nodes Edges Graph NodeId AtId in
+        AtId = {List.append "@-" {Int.toString OpCounter}}
+        Graph = {ExecutionGraph Rest OpCounter+1 AtId}
         if {List.member Val ['+' '-' '*' '/']} then
-            Graph = {ExecutionGraph Rest OpCounter+1}
             NodeId = {List.append {Atom.toString Val} {List.append "-" {Int.toString OpCounter}}}
-            AtId = {List.append "@-" {Int.toString OpCounter}}
             Nodes = {List.append Graph.nodes [node(id: NodeId value: Val kind: 'function') node(id: AtId value:'@' kind: 'application')]}
             Edges = {List.append Graph.edges [edge(AtId NodeId) edge(AtId {List.last Graph.nodes}.id)]}
         else
-            Graph = {ExecutionGraph Rest OpCounter}
             NodeId = {Atom.toString Val}
             if {List.member NodeId {List.map Graph.nodes GetId}} then
-                Nodes = Graph.nodes
+                Nodes = {List.append Graph.nodes [node(id: AtId value:'@' kind: 'application')]}
             else
-                Nodes = {List.append Graph.nodes [node(id: Val value: Val kind: 'value')]}
+                Nodes = {List.append Graph.nodes [node(id: Val value: Val kind: 'value') node(id: AtId value:'@' kind: 'application')]}
             end
             if {List.length Graph.nodes} > 0 then
-                Edges = {List.append Graph.edges [edge({List.last Graph.nodes}.id Val)]}
+                Edges = {List.append Graph.edges [edge(LastTraversed Val)]}
             else
                 Edges = nil
             end
         end
-        graph(nodes: Nodes edges: Edges)
+        graph(nodes: {List.take Nodes ({List.length Nodes} - 1)} edges: Edges)
     end
 end
             
@@ -245,7 +248,8 @@ local Main = {Str2Lst "x + y"}
     Foo = {Str2Lst "fun foo x = var y = x * x + x in y + y * y"}
     Foo2 = {Str2Lst "fun foo2 = var y = 2 * 5 in y / x"}
 in
-    {System.show {ExecutionGraph {SC Main}.body 0}}
+    {System.show {SC Main}}
+    {System.show {ExecutionGraph {SC Main}.body 0 'dummy'}}
     {System.show {SC Foo}}
     {System.show {SC Foo2}}
 end
