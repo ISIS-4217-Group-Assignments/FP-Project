@@ -1,3 +1,9 @@
+functor
+import
+    System
+    Application
+define
+
 %% /////////////////////////////////////////////////////////////////////////
 %%
 %%  AUXILIARY FUNCTIONS DEFINITIONS
@@ -5,8 +11,6 @@
 %%
 %% /////////////////////////////////////////////////////////////////////////
 
-
-declare Separate Env Str2Lst Parse ParseFun Infix2Prefix 
 
 proc {Separate Stack Res Cond Before After}
     case Stack of H|T then
@@ -37,7 +41,7 @@ in
     end
 end
 
-declare
+{System.show Separate}
 
 %% Split a string by spaces
 fun {Str2Lst Data}
@@ -122,9 +126,6 @@ end
 %% /////////////////////////////////////////////////////////////////////////
 
 
-
-declare SC Expr AExpr Defns Defn
-
 fun {SC LineList}
     case LineList of H|T then
         if H == "fun" then
@@ -179,7 +180,11 @@ local Main = {Str2Lst "x + y"}
     Foo = {Str2Lst "fun foo x = var y = x * x in y + y"}
     Foo2 = {Str2Lst "fun foo2 = var y = 2 * 5 in y / x"}
 in
-    {Browse {SC Main}}
-    {Browse {SC Foo}}
-    {Browse {SC Foo2}}
+    {System.show {SC Main}}
+    {System.show {SC Foo}}
+    {System.show {SC Foo2}}
+end
+
+    {System.showInfo 'Welcome to JDoodle!'}
+    {Application.exit 0}
 end
