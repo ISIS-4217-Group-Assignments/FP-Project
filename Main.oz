@@ -164,6 +164,69 @@ in
     defn(var:{StringToAtom Before.1} body:{Map {Infix2Prefix After} fun {$ X} {StringToAtom X} end})
 end
 
+%% /////////////////////////////////////////////////////////////////////////
+%%
+%%  TREE REPRESENTATIONS
+%%  Search: main.oz
+%%
+%% /////////////////////////////////////////////////////////////////////////
+
+%% Placeholders
+fun {Adds Args}
+    case Args of
+        nil then 0
+        [] H|T then H + {Adds T}
+    end
+end
+
+fun {Subs Args}
+    case Args of
+        nil then 0
+        [] H|T then H - {Adds T}
+    end
+end
+
+fun {ApplyOp Op Args}
+    if Op == "+" then
+        {Adds Args}
+    else
+        if Op == "-" then
+            {Subs Args}
+        else
+            {System.show 'Unsupported operation!'}
+        end
+    end
+end
+
+fun {GetId Rec}
+    Rec.id
+end
+
+fun {ExecutionGraph Body OpCounter}
+    case Body of nil then graph(nodes: nil edges: nil)
+    [] Val|Rest then
+    Nodes Edges Graph NodeId AtId in
+        if {List.member Val ['+' '-' '*' '/']} then
+            Graph = {ExecutionGraph Rest OpCounter+1}
+            NodeId = {List.append {Atom.toString Val} {List.append "-" {Int.toString OpCounter}}}
+            AtId = {List.append "@-" {Int.toString OpCounter}}
+            Nodes = {List.append Graph.nodes [node(id: NodeId value: Val kind: 'function') node(id: AtId value:'@' kind: 'application')]}
+            Edges = {List.append Graph.edges [[AtId NodeId] [AtId {List.nth Graph.nodes {List.length Graph.nodes}}.id]]}
+        else
+            Graph = {ExecutionGraph Rest OpCounter}
+            NodeId = {Atom.toString Val}
+            if {List.member NodeId {List.map Graph.nodes GetId}} then
+                Nodes = Graph.nodes
+            else
+                Nodes = {List.append Graph.nodes [node(id: Val value: Val kind: 'value')]}
+            end
+            Edges = {List.append Graph.edges [[{List.nth Graph.nodes {List.length Graph.nodes}}.id Val]]}
+        end
+        graph(nodes: Nodes edges: Edges)
+    end
+end
+            
+        
 
 
 %% /////////////////////////////////////////////////////////////////////////
@@ -175,14 +238,12 @@ end
 
 
 local Main = {Str2Lst "x + y"}
-    Foo = {Str2Lst "fun foo x = var y = x * x in y + y"}
+    Foo = {Str2Lst "fun foo x = var y = x * x + x in y + y * y"}
     Foo2 = {Str2Lst "fun foo2 = var y = 2 * 5 in y / x"}
 in
     {System.show {SC Main}}
     {System.show {SC Foo}}
     {System.show {SC Foo2}}
 end
-
-    {System.showInfo 'Welcome to JDoodle!'}
     {Application.exit 0}
 end
