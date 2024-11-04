@@ -41,8 +41,6 @@ in
     end
 end
 
-{System.show Separate}
-
 %% Split a string by spaces
 fun {Str2Lst Data}
     {String.tokens Data & }
