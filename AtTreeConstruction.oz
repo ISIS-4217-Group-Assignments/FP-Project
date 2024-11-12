@@ -5,7 +5,7 @@ import
 define
 
 class GetOpTree
-    attr arityMap root nodes edges counter vacantAt
+    attr arityMap root nodes edges counter vacantAt previousAt newAt arity children newOp
     meth init(ArityMap Root)
         arityMap := {Record.toDictionary ArityMap}
         root := Root
@@ -13,6 +13,11 @@ class GetOpTree
         edges := nil
         counter := 1
         vacantAt := [node(value: Root children: 2)]
+        previousAt := Root
+        newAt := nil
+        arity := 0
+        children := 0
+        newOp := nil
     end
     
     meth getEdges($)
@@ -21,47 +26,45 @@ class GetOpTree
     
     meth assembleBinaryTreeNodesEdges(L)
         for X in L do
-            Arity NewAt NewOp PreviousAt Children in
             if {List.member X {Dictionary.keys @arityMap}} then
-                Arity = {Dictionary.get @arityMap X}
-                NewOp = {String.toAtom {List.append {List.append {Atom.toString X} "-"} {Int.toString @counter}}}
-                for Y in 1..(Arity-1) do
-                    NewAt = {String.toAtom {List.append "@-" {Int.toString @counter}}}
-                    {System.show NewAt}
-                    nodes := {List.append @nodes [NewAt]}
-                    PreviousAt = {List.last @vacantAt}
-                    Children = PreviousAt.children
-                    edges := {List.append @edges [edge(NewAt PreviousAt.value)]}
-                    if Children == 1 then
-                        vacantAt := {List.append {List.take @vacantAt ({List.length @vacantAt} - 1)} [node(value: NewAt children: 2)]}
+                arity := {Dictionary.get @arityMap X}
+                newOp := {String.toAtom {List.append {List.append {Atom.toString X} "-"} {Int.toString @counter}}}
+                for Y in 1..(@arity) do
+                    newAt := {String.toAtom {List.append "@-" {Int.toString @counter}}}
+                    nodes := {List.append @nodes [@newAt]}
+                    previousAt := {List.last @vacantAt}
+                    children := @previousAt.children
+                    edges := {List.append @edges [edge(@previousAt.value @newAt)]}
+                    if @children == 1 then
+                        vacantAt := {List.append {List.take @vacantAt ({List.length @vacantAt} - 1)} [node(value: @newAt children: 2)]}
                     else
-                        vacantAt := {List.append {List.take @vacantAt ({List.length @vacantAt} - 1)} [node(value: PreviousAt children: (Children - 1)) node(value: NewAt children: 2)]}
+                        vacantAt := {List.append {List.take @vacantAt ({List.length @vacantAt} - 1)} [node(value: @previousAt.value children: (@children - 1)) node(value: @newAt children: 2)]}
                     end
                     counter := @counter + 1
                 end
-                PreviousAt = {List.last @vacantAt}
-                Children = PreviousAt.children
-                edges := {List.append @edges edge(PreviousAt NewOp)}
-                if Children == 1 then
+                previousAt := {List.last @vacantAt}
+                children := @previousAt.children
+                edges := {List.append @edges [edge(@previousAt.value @newOp)]}
+                if @children == 1 then
                     vacantAt := {List.take @vacantAt ({List.length @vacantAt} - 1)}
                 else
-                    vacantAt := {List.append {List.take @vacantAt ({List.length @vacantAt} - 1)} [node(value: PreviousAt children: (Children - 1))]}
+                    vacantAt := {List.append {List.take @vacantAt ({List.length @vacantAt} - 1)} [node(value: @previousAt.value children: (@children - 1))]}
                 end
             else
-                NewOp = X
-                PreviousAt = {List.last @vacantAt}
-                Children = PreviousAt.children
-                edges := {List.append @edges edge(PreviousAt NewOp)}
-                if Children == 1 then
+                newOp := X
+                previousAt := {List.last @vacantAt}
+                children := @previousAt.children
+                edges := {List.append @edges [edge(@previousAt.value @newOp)]}
+                if @children == 1 then
                     vacantAt := {List.take @vacantAt ({List.length @vacantAt} - 1)}
                 else
-                    vacantAt := {List.append {List.take @vacantAt ({List.length @vacantAt} - 1)} [node(value: PreviousAt children: (Children - 1))]}
+                    vacantAt := {List.append {List.take @vacantAt ({List.length @vacantAt} - 1)} [node(value: @previousAt.value children: (@children - 1))]}
                 end
             end
-            if {List.member NewOp @nodes} then
+            if {List.member @newOp @nodes} then
                 nodes := @nodes
             else
-                nodes := {List.append @nodes [NewOp]}
+                nodes := {List.append @nodes [@newOp]}
             end
         end
     end
@@ -77,6 +80,7 @@ local BinTree in
 
     {System.showInfo 'Welcome to JDoodle!'}
     {System.show ['*' 'z' '+' 'x' 'y']}
+    {System.show {BinTree getEdges($)}}
 end
     {Application.exit 0}
 end
