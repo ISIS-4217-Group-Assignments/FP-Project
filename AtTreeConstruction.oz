@@ -21,7 +21,7 @@ class GetOpTree
     
     meth assembleBinaryTreeNodesEdges(L)
         for X in L do
-            Arity NewAt NewOp PreviousAt Children Tail in
+            Arity NewAt NewOp PreviousAt Children in
             if {List.member X {Dictionary.keys @arityMap}} then
                 Arity = {Dictionary.get @arityMap X}
                 NewOp = {String.toAtom {List.append {List.append {Atom.toString X} "-"} {Int.toString @counter}}}
@@ -49,13 +49,13 @@ class GetOpTree
                 end
             else
                 NewOp = X
-                PreviousAt|Tail = @vacantAt
+                PreviousAt = {List.last @vacantAt}
                 Children = PreviousAt.children
                 edges := {List.append @edges edge(PreviousAt NewOp)}
                 if Children == 1 then
-                    @vacantAt := Tail
+                    vacantAt := {List.take @vacantAt ({List.length @vacantAt} - 1)}
                 else
-                    @vacantAt := node(value:PreviousAt children: (Children - 1))
+                    vacantAt := {List.append {List.take @vacantAt ({List.length @vacantAt} - 1)} [node(value: PreviousAt children: (Children - 1))]}
                 end
             end
             if {List.member NewOp @nodes} then
