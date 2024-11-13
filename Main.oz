@@ -1,8 +1,8 @@
-functor
-import
-    System
-    Application
-define
+%functor
+%import
+%    System
+%    Application
+%define
 
 %% /////////////////////////////////////////////////////////////////////////
 %%
@@ -10,7 +10,7 @@ define
 %%  Search: functions.oz
 %%
 %% /////////////////////////////////////////////////////////////////////////
-
+declare
 
 proc {Separate Stack Res Cond Before After}
     case Stack of H|T then
@@ -146,8 +146,11 @@ end
 
 
 fun {Expr ExprList}
-    {Map {Infix2Prefix ExprList} fun {$ X} {StringToAtom X} end}
+    Ret={Map {Infix2Prefix ExprList} fun {$ X} {StringToAtom X} end}
+in
+    %{FoldL Ret.2 fun {$ Acum X} app(Acum X) end Ret.1}
     %{Infix2Prefix ExprList} DEBUG
+    Ret
 end
 
 fun {Defns DefnsList}
@@ -273,17 +276,13 @@ end
 %% /////////////////////////////////////////////////////////////////////////
 
 
-local Main = {Str2Lst "x + y"}
+local Main = {Str2Lst "( x + 1 ) * ( x + 1 ) "}
     Foo = {Str2Lst "fun foo x = var y = x * x + x in y + y * y"}
     Foo2 = {Str2Lst "fun foo2 = var y = 2 * 5 in y / x"}
 in
-    {System.show {SC Main}}
-    {System.show {ExecutionGraph {SC Main}.body 1 '@-0' '@-nil' nil [node(id: '@-0' value: '@' kind: 'application')]}}
-    {System.show {SC Foo}}
-    {System.show {ExecutionGraph {SC Foo}.body 1 '@-0' '@-nil' nil [node(id: '@-0' value: '@' kind: 'application')]}}
-    {System.show {SC Foo2}}
-end
-
-    {System.showInfo 'Welcome to JDoodle!'}
-    {Application.exit 0}
+    {Browse {SC Main}}
+    %{Browse {ExecutionGraph {SC Main}.body 1 '@-0' '@-nil' nil [node(id: '@-0' value: '@' kind: 'application')]}}
+    %{Browse {SC Foo}}
+    %{Browse {ExecutionGraph {SC Foo}.body 1 '@-0' '@-nil' nil [node(id: '@-0' value: '@' kind: 'application')]}}
+    %{Browse {SC Foo2}}
 end
