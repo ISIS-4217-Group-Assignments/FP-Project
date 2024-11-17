@@ -170,100 +170,10 @@ end
 %% /////////////////////////////////////////////////////////////////////////
 %%
 %%  TREE REPRESENTATIONS
-%%  Search: main.oz
+%%  Search: tree.oz
 %%
 %% /////////////////////////////////////////////////////////////////////////
 
-%% Placeholders
-fun {Adds Args}
-    case Args of
-        nil then 0
-        [] H|T then H + {Adds T}
-    end
-end
-
-fun {Subs Args}
-    case Args of
-        nil then 0
-        [] H|T then H - {Adds T}
-    end
-end
-
-fun {ApplyOp Op Args}
-    if Op == "+" then
-        {Adds Args}
-    else
-        if Op == "-" then
-            {Subs Args}
-        else
-            {System.show 'Unsupported operation!'}
-        end
-    end
-end
-
-fun {GetId Rec}
-    Rec.id
-end
-
-fun {IsApplication Rec}
-    Rec.kind == 'application'
-end
-
-fun {IsPrimitive Op}
-    {List.member Op ['+' '-' '*' '/']}
-end
-
-fun {ExecutionGraph Body OpCounter LastAtConstant LastAtOperation Edges Nodes}
-    %%{System.show LastAtConstant}
-    %%{System.show LastAtOperation}
-    %%{System.show Nodes}
-    %%{System.show Edges}
-    case Body of nil then graph(nodes: nil edges: nil)
-    [] Val|Rest then
-    TempNodes TempEdges Graph NodeId AtId in
-        if {IsPrimitive Val} then
-            AtId = {String.toAtom {List.append "@-" {Int.toString OpCounter}}}
-            NodeId = {String.toAtom {List.append {Atom.toString Val} {List.append "-" {Int.toString OpCounter}}}}
-            %%TempEdges = {List.append Edges [edge(AtId NodeId)]}
-            TempEdges = [edge(AtId NodeId)]
-            %%TempNodes = {List.append Nodes [node(id: NodeId value: Val kind: 'function') node(id: AtId value:'@' kind: 'application')]}
-            TempNodes = [node(id: NodeId value: Val kind: 'function') node(id: AtId value:'@' kind: 'application')]
-            Graph = {ExecutionGraph Rest OpCounter+1 LastAtConstant AtId TempEdges {List.append Nodes TempNodes}}
-        else
-            NodeId = Val
-            if {List.member NodeId {List.map Nodes GetId}} then
-                %%TempNodes = Nodes
-                TempNodes = nil
-            else
-                %%TempNodes = {List.append Nodes [node(id: NodeId value: Val kind: 'value')]}
-                TempNodes = [node(id: NodeId value: Val kind: 'value')]
-            end
-            if {List.length Rest} > 0 then
-                if {List.member {List.nth Rest 1} ['+' '-' '*' '/']} then
-                    %%TempEdges = {List.append Edges [edge(LastAtOperation Val) edge(LastAtConstant LastAtOperation)]}
-                    TempEdges = [edge(LastAtOperation Val) edge(LastAtConstant LastAtOperation)]
-                    Graph = {ExecutionGraph Rest OpCounter+1 LastAtConstant LastAtOperation TempEdges {List.append Nodes TempNodes}}
-                else
-                    %%if {List.length {List.filter Rest IsPrimitive}} > 0 then
-                    if OpCounter > 3 then
-                        AtId = {String.toAtom {List.append "@-" {Int.toString OpCounter}}}
-                        %%TempEdges = {List.append Edges [edge(AtId NodeId) edge(LastAtConstant AtId)]}
-                        TempEdges = [edge(AtId NodeId) edge(LastAtConstant AtId)]
-                        Graph = {ExecutionGraph Rest OpCounter+1 AtId LastAtOperation TempEdges {List.append Nodes {List.append TempNodes [node(id: AtId value:'@' kind: 'application')]}}}
-                    else
-                        TempEdges = [edge(LastAtConstant NodeId)]
-                        Graph = {ExecutionGraph Rest OpCounter+1 LastAtConstant LastAtOperation TempEdges {List.append Nodes TempNodes}}
-                    end
-                end
-            else
-                %%TempEdges = {List.append Edges [edge(LastAtOperation Val) edge(LastAtConstant LastAtOperation)]}
-                TempEdges = [edge(LastAtOperation NodeId) edge(LastAtConstant LastAtOperation)]
-                Graph = {ExecutionGraph Rest OpCounter+1 LastAtConstant LastAtOperation TempEdges {List.append Nodes TempNodes}}
-            end
-        end
-        graph(nodes: {List.append Graph.nodes TempNodes} edges: {List.append Graph.edges TempEdges})
-    end
-end
             
         
 
@@ -276,13 +186,11 @@ end
 %% /////////////////////////////////////////////////////////////////////////
 
 
-local Main = {Str2Lst "( x + 1 ) * ( x + 1 ) "}
+local Main = {Str2Lst "foo ( 1 * 2 ) + 3"}
     Foo = {Str2Lst "fun foo x = var y = x * x + x in y + y * y"}
-    Foo2 = {Str2Lst "fun foo2 = var y = 2 * 5 in y / x"}
+    Foo2 = {Str2Lst "fun foo2 x = var y = 2 * 5 in y / x"}
 in
     {Browse {SC Main}}
-    %{Browse {ExecutionGraph {SC Main}.body 1 '@-0' '@-nil' nil [node(id: '@-0' value: '@' kind: 'application')]}}
-    %{Browse {SC Foo}}
-    %{Browse {ExecutionGraph {SC Foo}.body 1 '@-0' '@-nil' nil [node(id: '@-0' value: '@' kind: 'application')]}}
-    %{Browse {SC Foo2}}
+    {Browse {SC Foo}}
+    {Browse {SC Foo2}}
 end
