@@ -1,8 +1,8 @@
-functor
-import
-    System
-    Application
-define
+%functor
+%import
+%    System
+%    Application
+%define
 
 %% /////////////////////////////////////////////////////////////////////////
 %%
@@ -10,7 +10,7 @@ define
 %%  Search: functions.oz
 %%
 %% /////////////////////////////////////////////////////////////////////////
-
+declare
 
 proc {Separate Stack Res Cond Before After}
     case Stack of H|T then
@@ -116,6 +116,218 @@ fun {Infix2Prefix Data}
     end
 end
 
+
+%% //////////////////////////////////////////////////////////////
+%%
+%%  PARSER LIBRARY
+%%  Search: parser.oz
+%%
+%% //////////////////////////////////////////////////////////////
+
+% Parser a = [Token] -> [(a,[Token])]
+
+% result of a parser is a list of records in the form parse(a [UnparsedTokens])
+% a is the element that it parsed or searched for and the list of tokens is a list of 
+% Tokens that haven't been parsed
+
+%   CONSTANTS
+declare BINOP = ["+" "-" "/" "*"]
+        RESERVEDWORDS = {Append ["fun" "in" "="] BINOP}
+
+%%  GENERAL PARSER
+declare
+
+fun {PSat Cond TokenList}
+    case TokenList of H|T then
+        if {Cond H} then parse(H T) | nil
+        else nil
+        end
+    else
+        nil
+    end
+end
+
+fun {PLit Literal TokenList}
+    {PSat fun {$ X} X==Literal end TokenList}
+end
+
+fun {PVar TokenList}
+    Cond = fun {$ X} {And {Not {Member X RESERVEDWORDS}} {Char.isAlpha X.1}} end
+    PVarr = fun {$ Tokens} {PSat Cond Tokens} end 
+    Applier = fun {$ X} var({StringToAtom X}) end
+in
+    {PApply Applier PVarr TokenList}
+end
+
+fun {PNum TokenList}
+    Cond = fun {$ X} {Or {String.isInt X} {String.isFloat X}} end
+    PNumm = fun {$ Tokens} {PSat Cond Tokens} end
+    Applier = fun {$ X} num({StringToAtom X}) end
+in
+    {PApply Applier PNumm TokenList}
+end
+
+fun {PAlt P1 P2 TokenList}
+    {Append {P1 TokenList} {P2 TokenList}}
+end
+
+fun {PAlt3 P1 P2 P3 TokenList}
+    {Append {Append {P1 TokenList} {P2 TokenList}} {P3 TokenList}}
+end
+
+fun {PThen Combine P1 P2 TokenList}
+    Parsed1 = {P1 TokenList}
+    fun {Mapper X} % X = parse(V1 Toks)
+        [parse({Combine X.1 V2} Toks2) suchthat parse(V2 Toks2) in {P2 X.2}]
+    end
+in
+    {Flatten {Map Parsed1 Mapper}}
+end
+
+fun {PThen3 Combine P1 P2 P3 TokenList}
+    Parsed1 = {P1 TokenList}
+    fun {Mapper1 X} % X = parse(V1 Toks1)
+        [parse1(vs(X.1 V2) Toks2) suchthat parse(V2 Toks2) in {P2 X.2}]
+    end
+
+    Parsed2 = {Flatten {Map Parsed1 Mapper1}}
+    fun {Mapper2 Y} % Y = parse1(vs(V1 V2) Toks2)
+        [parse({Combine Y.1.1 Y.1.2 V3} Toks3) suchthat parse(V3 Toks3) in {P3 Y.2}]
+    end
+in
+    {Flatten {Map Parsed2 Mapper2}}
+end
+
+fun {PThen4 Combine P1 P2 P3 P4 TokenList}
+    Parsed1 = {P1 TokenList}
+    fun {Mapper1 X}
+        [parse1(vs(X.1 V2) Toks2) suchthat parse(V2 Toks2) in {P2 X.2}]
+    end
+    Parsed2 = {Flatten {Map Parsed1 Mapper1}}
+    fun {Mapper2 Y}
+        [parse2(vs(Y.1.1 Y.1.2 V3) Toks3) suchthat parse(V3 Toks3) in {P3 Y.2}]
+    end
+    Parsed3 = {Flatten {Map Parsed2 Mapper2}}
+    fun {Mapper3 Z}
+        [parse({Combine Z.1.1 Z.1.2 Z.1.3 V4} Toks4) suchthat parse(V4 Toks4) in {P4 Z.2}]
+    end
+in
+    {Flatten {Map Parsed3 Mapper3}}
+
+end
+
+fun {PEmpty Input TokenList}
+    [parse(Input TokenList)]
+end
+
+fun {POneOrMore P1 TokenList}
+    Parsed1 = {Flatten {Map {P1 TokenList} fun {$ X} {PEmpty X.1|nil X.2} end}}
+in
+    case Parsed1 of nil then
+        nil
+    else
+        {POneOrMoreImp Parsed1 P1}
+    end
+end
+
+fun {POneOrMoreImp PrevParse P1}
+    fun {Mapper X} % X = parse([V] Tokens)
+        [parse({Append X.1 V|nil} Tokens) suchthat parse(V Tokens) in {P1 X.2}]
+    end
+    Then = {Flatten {Map PrevParse Mapper}}
+in
+    case Then of nil then
+        PrevParse
+    else
+        {Append PrevParse {POneOrMoreImp Then P1}}
+    end
+end
+
+fun {PZeroOrMore P1 TokenList}
+    {PAlt fun {$ Tokens} {POneOrMore P1 Tokens} end fun {$ Tokens} {PEmpty nil Tokens} end TokenList}
+end
+
+fun {PApply Function P TokenList}
+    Parsed = {P TokenList}
+    fun {Mapper X}
+        case X of parse(A Tokens) then parse({Function A} Tokens)
+        else
+            nil
+        end
+    end
+in
+    {Map Parsed Mapper}
+end
+
+fun {PExpression TokenList}
+    {PAlt3 PBinopExpression PFunctionCall PAtomicExpression TokenList}
+end
+
+fun {PBinop TokenList}
+    P = fun {$ Tokens} {PSat fun {$ X} {Member X BINOP} end Tokens} end
+in
+    {PApply fun {$ X} var({StringToAtom X}) end P TokenList}
+end
+
+fun {PBinopExpression TokenList}
+    {PThen3 fun {$ X Y Z} app(app(X Y) Z) end PBinop PExpression PExpression TokenList}
+end
+
+fun {PFunctionCall TokenList}
+    {PThen fun {$ Var ExprList} {FoldL ExprList fun {$ Y Z} app(Y Z) end Var} end PVar POneOrMoreExpr TokenList}
+end
+
+fun {POneOrMoreExpr TokenList}
+    {POneOrMore PExpression TokenList}
+end
+
+fun {PAtomicExpression TokenList}
+    {PAlt PVar PNum TokenList}
+end
+
+
+%%  Validate output
+
+fun {IsExpr X}
+    case X of app(L R) then
+        {And {IsOperation L} {IsExpr R}}
+    else
+        {Or {Var X} {Num X}}
+    end
+end
+
+fun {IsOperation X}
+    case X of app(L R) then
+        {And {IsOperation L} {IsExpr R}}
+    else
+        {Var X}
+    end
+end
+
+fun {Var X}
+    case X of var(_) then true
+    else false
+    end
+end
+
+fun {Num X}
+    case X of num(_) then true
+    else false
+    end
+end
+
+
+%% LOCAL SCOPE TO TEST PARSING LIBRARY
+%local Tokens1 = ["+" "foo" "*" "1" "2" "3"]
+%    Parses = {PExpression Tokens1}
+%in
+%    {Browse {StringToAtom "foo ( 1 * 2 ) + 3"}}
+%    {Browse {Map Tokens1 fun {$ X} {StringToAtom X} end}}
+%    {Browse {Filter Parses fun {$ X} parse(_ B) = X in B == nil end}.1.1}
+%    {Browse {IsExpr {Filter Parses fun {$ X} parse(_ B) = X in B == nil end}.1.1}}
+%end
+
+
 %% /////////////////////////////////////////////////////////////////////////
 %%
 %%  SYNTAX FUNCTIONS DEFINITIONS
@@ -133,7 +345,6 @@ fun {SC LineList}
             in
                 {Separate Remainder nil fun {$ X} {Not X=="="} end ArgList After}
                 {Separate After nil fun {$ X} {Not X=="in"} end Definitions Expresions}
-                %sc(name:Name args:ArgList defns:{Defns Definitions} body:{Expr Expresions}) DEBUG
                 sc(name:{StringToAtom Name} args:{Map ArgList fun {$ X} {StringToAtom X} end} defns:{Defns Definitions} body:{Expr Expresions})
             end
         else
@@ -146,8 +357,13 @@ end
 
 
 fun {Expr ExprList}
-    {Map {Infix2Prefix ExprList} fun {$ X} {StringToAtom X} end}
-    %{Infix2Prefix ExprList} DEBUG
+    EvaluatedExprList = {PExpression {Infix2Prefix ExprList}}
+    ValidExpression = {Filter EvaluatedExprList fun {$ Parse} parse(A B) = Parse in {And {IsExpr A} B==nil} end}
+in
+    case ValidExpression of H|nil then H.1
+    else
+        error(moreThanOneValidExpression)
+    end
 end
 
 fun {Defns DefnsList}
@@ -160,110 +376,8 @@ fun {Defn DefnList}
     Before After
 in
     {Separate DefnList nil fun {$ X} {Not X=="="} end Before After}
-    %defn(var:Before.1 body:{Infix2Prefix After}) DEBUG
-    defn(var:{StringToAtom Before.1} body:{Map {Infix2Prefix After} fun {$ X} {StringToAtom X} end})
+    defn(varName:{StringToAtom Before.1} body:{Expr After})
 end
-
-%% /////////////////////////////////////////////////////////////////////////
-%%
-%%  TREE REPRESENTATIONS
-%%  Search: main.oz
-%%
-%% /////////////////////////////////////////////////////////////////////////
-
-%% Placeholders
-fun {Adds Args}
-    case Args of
-        nil then 0
-        [] H|T then H + {Adds T}
-    end
-end
-
-fun {Subs Args}
-    case Args of
-        nil then 0
-        [] H|T then H - {Adds T}
-    end
-end
-
-fun {ApplyOp Op Args}
-    if Op == "+" then
-        {Adds Args}
-    else
-        if Op == "-" then
-            {Subs Args}
-        else
-            {System.show 'Unsupported operation!'}
-        end
-    end
-end
-
-fun {GetId Rec}
-    Rec.id
-end
-
-fun {IsApplication Rec}
-    Rec.kind == 'application'
-end
-
-fun {IsPrimitive Op}
-    {List.member Op ['+' '-' '*' '/']}
-end
-
-fun {ExecutionGraph Body OpCounter LastAtConstant LastAtOperation Edges Nodes}
-    %%{System.show LastAtConstant}
-    %%{System.show LastAtOperation}
-    %%{System.show Nodes}
-    %%{System.show Edges}
-    case Body of nil then graph(nodes: nil edges: nil)
-    [] Val|Rest then
-    TempNodes TempEdges Graph NodeId AtId in
-        if {IsPrimitive Val} then
-            AtId = {String.toAtom {List.append "@-" {Int.toString OpCounter}}}
-            NodeId = {String.toAtom {List.append {Atom.toString Val} {List.append "-" {Int.toString OpCounter}}}}
-            %%TempEdges = {List.append Edges [edge(AtId NodeId)]}
-            TempEdges = [edge(AtId NodeId)]
-            %%TempNodes = {List.append Nodes [node(id: NodeId value: Val kind: 'function') node(id: AtId value:'@' kind: 'application')]}
-            TempNodes = [node(id: NodeId value: Val kind: 'function') node(id: AtId value:'@' kind: 'application')]
-            Graph = {ExecutionGraph Rest OpCounter+1 LastAtConstant AtId TempEdges {List.append Nodes TempNodes}}
-        else
-            NodeId = Val
-            if {List.member NodeId {List.map Nodes GetId}} then
-                %%TempNodes = Nodes
-                TempNodes = nil
-            else
-                %%TempNodes = {List.append Nodes [node(id: NodeId value: Val kind: 'value')]}
-                TempNodes = [node(id: NodeId value: Val kind: 'value')]
-            end
-            if {List.length Rest} > 0 then
-                if {List.member {List.nth Rest 1} ['+' '-' '*' '/']} then
-                    %%TempEdges = {List.append Edges [edge(LastAtOperation Val) edge(LastAtConstant LastAtOperation)]}
-                    TempEdges = [edge(LastAtOperation Val) edge(LastAtConstant LastAtOperation)]
-                    Graph = {ExecutionGraph Rest OpCounter+1 LastAtConstant LastAtOperation TempEdges {List.append Nodes TempNodes}}
-                else
-                    %%if {List.length {List.filter Rest IsPrimitive}} > 0 then
-                    if OpCounter > 3 then
-                        AtId = {String.toAtom {List.append "@-" {Int.toString OpCounter}}}
-                        %%TempEdges = {List.append Edges [edge(AtId NodeId) edge(LastAtConstant AtId)]}
-                        TempEdges = [edge(AtId NodeId) edge(LastAtConstant AtId)]
-                        Graph = {ExecutionGraph Rest OpCounter+1 AtId LastAtOperation TempEdges {List.append Nodes {List.append TempNodes [node(id: AtId value:'@' kind: 'application')]}}}
-                    else
-                        TempEdges = [edge(LastAtConstant NodeId)]
-                        Graph = {ExecutionGraph Rest OpCounter+1 LastAtConstant LastAtOperation TempEdges {List.append Nodes TempNodes}}
-                    end
-                end
-            else
-                %%TempEdges = {List.append Edges [edge(LastAtOperation Val) edge(LastAtConstant LastAtOperation)]}
-                TempEdges = [edge(LastAtOperation NodeId) edge(LastAtConstant LastAtOperation)]
-                Graph = {ExecutionGraph Rest OpCounter+1 LastAtConstant LastAtOperation TempEdges {List.append Nodes TempNodes}}
-            end
-        end
-        graph(nodes: {List.append Graph.nodes TempNodes} edges: {List.append Graph.edges TempEdges})
-    end
-end
-            
-        
-
 
 %% /////////////////////////////////////////////////////////////////////////
 %%
@@ -273,17 +387,11 @@ end
 %% /////////////////////////////////////////////////////////////////////////
 
 
-local Main = {Str2Lst "x + y"}
+local Main = {Str2Lst "foo ( 1 * 2 ) + 3"}
     Foo = {Str2Lst "fun foo x = var y = x * x + x in y + y * y"}
-    Foo2 = {Str2Lst "fun foo2 = var y = 2 * 5 in y / x"}
+    Foo2 = {Str2Lst "fun foo2 x = var y = 2 * 5 in y / x"}
 in
-    {System.show {SC Main}}
-    {System.show {ExecutionGraph {SC Main}.body 1 '@-0' '@-nil' nil [node(id: '@-0' value: '@' kind: 'application')]}}
-    {System.show {SC Foo}}
-    {System.show {ExecutionGraph {SC Foo}.body 1 '@-0' '@-nil' nil [node(id: '@-0' value: '@' kind: 'application')]}}
-    {System.show {SC Foo2}}
-end
-
-    {System.showInfo 'Welcome to JDoodle!'}
-    {Application.exit 0}
+    {Browse {SC Main}}
+    {Browse {SC Foo}}
+    {Browse {SC Foo2}}
 end

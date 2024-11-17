@@ -58,4 +58,22 @@ $$
                             & num \\
     \end{align*} \\
 \end{align*}
+$$  
+  
+The previous syntax rules are able to parse correctly all mathematical operations. Also, it is able to parse function calls. And using function calls as parameters for binop operations. And nested operaition calls and many more. However, it fails when parsing an expression as a parameter for a function call. For example $foo + 1\ 2$ is the same as evaluating $foo(1+2)$ and it fails to evaluate it. 
+
+To prevent left recursion and problems with implementation, the final implementation should end up using the following syntax (Haven't implemented it yet though)
+
+$$
+\begin{align*}
+    &\begin{align*}
+        expr \Rightarrow\ & aexpr \\
+                            & binop\ expr_1\ expr_2 \\
+                            & var\ expr_1\ expr_2\ ...\ expr_n\quad n\geq 1
+    \end{align*} \\
+    &\begin{align*}
+        aexpr \Rightarrow\ & var \\
+                            & num \\
+    \end{align*} \\
+\end{align*}
 $$
