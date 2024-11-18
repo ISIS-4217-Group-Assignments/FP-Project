@@ -9,6 +9,7 @@ $$
     \end{align*} \\
     &\begin{align*}
         sc \Rightarrow\  & expr \\
+                            &defns\ \text{in}\  expr \\
                             &\text{fun}\ var\  var_1\ ...\ var_n = expr \quad n \geq 1 \\
                             &\text{fun}\ var\ var_1\ ...\ var_n = defns\ \text{in}\ expr\quad n \geq 1 \\
     \end{align*} \\
@@ -26,7 +27,7 @@ $$
         defns \Rightarrow\ & defn_1;\ ...\  ;\ defn_n\quad n\geq 1 \\
     \end{align*} \\
     &\begin{align*}
-        defn \Rightarrow\ & var = expr
+        defn \Rightarrow\ & \text{var}\  var = expr
     \end{align*} \\
     &\begin{align*}
         binop \Rightarrow\ & \text{+}\ |\ \text{-}\ |\ \text{*}\ |\ \text{/} \\

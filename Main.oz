@@ -259,6 +259,35 @@ in
     {Map Parsed Mapper}
 end
 
+%%SC
+
+%fun {PSuperComb TokenList}
+%
+%end
+
+
+%% Defns
+
+%fun {PDefns TokenList}
+%    PIn = fun {$ Tokens} {PLit "in" Tokens} end
+%    POneOrMoreDefns = fun {$ Tokens} {POneOrMore PDefn Tokens} end
+%    Combinator = fun {$ DefnsList Equal} DefnsList end
+%in
+%    {PThen Combinator POneOrMoreDefns PIn}
+%end
+
+%fun {PDefn TokenList}
+%    PSymbol = fun {$ Tokens} {PLit "var" Tokens} end
+%    PGetVarName = fun {$ Tokens} {PApply fun {$ X} var(Name)=X in Name end PVar Tokens}
+%    PEqual = fun {$ Tokens} {PLit "=" Tokens} end
+%in
+%
+%end
+
+
+
+%% EXPRESSIONS
+
 fun {PExpression TokenList}
     {PAlt3 PBinopExpression PFunctionCall PAtomicExpression TokenList}
 end
@@ -283,6 +312,15 @@ end
 
 fun {PAtomicExpression TokenList}
     {PAlt PVar PNum TokenList}
+end
+
+%% Filter parse outputs
+fun {GetParse ParseList}
+    {Map ParseList fun {$ Parse} parse(X _)=Parse in X end}
+end
+
+fun {GetTokens ParseList}
+    {Map ParseList fun {$ Parse} parse(_ X)=Parse in X end}
 end
 
 
@@ -340,15 +378,24 @@ fun {SC LineList}
     case LineList of H|T then
         if H == "fun" then
             local Name|Remainder = T
-                ArgList After
-                Definitions Expresions
+                Before1 After1
+                Before2 After2
             in
-                {Separate Remainder nil fun {$ X} {Not X=="="} end ArgList After}
-                {Separate After nil fun {$ X} {Not X=="in"} end Definitions Expresions}
-                sc(name:{StringToAtom Name} args:{Map ArgList fun {$ X} {StringToAtom X} end} defns:{Defns Definitions} body:{Expr Expresions})
+                {Separate Remainder nil fun {$ X} {Not X=="="} end Before1 After1}
+                %case of After 
+                {Separate After1 nil fun {$ X} {Not X=="in"} end Before2 After2}
+                case After2 of nil then sc(name:{StringToAtom Name} args:{Map Before1 fun {$ X} {StringToAtom X} end} defns:nil body:{Expr Before2})
+                else sc(name:{StringToAtom Name} args:{Map Before1 fun {$ X} {StringToAtom X} end} defns:{Defns Before2} body:{Expr After2})
+                end
             end
         else
-            sc(name:'--MAIN--' args:nil defns:nil body:{Expr LineList})
+            local Before After
+            in
+                {Separate LineList nil fun {$ X} {Not X=="in"} end Before After}
+                case After of nil then sc(name:'--MAIN--' args:nil defns:nil body:{Expr Before})
+                else sc(name:'--MAIN--' args:nil defns:{Defns Before} body:{Expr After})
+                end
+            end
         end
     else
         sc(name:nil args:nil body:nil)
@@ -358,12 +405,9 @@ end
 
 fun {Expr ExprList}
     EvaluatedExprList = {PExpression {Infix2Prefix ExprList}}
-    ValidExpression = {Filter EvaluatedExprList fun {$ Parse} parse(A B) = Parse in {And {IsExpr A} B==nil} end}
+    ValidExpressions = {Filter EvaluatedExprList fun {$ Parse} parse(A B) = Parse in {And {IsExpr A} B==nil} end}
 in
-    case ValidExpression of H|nil then H.1
-    else
-        error(moreThanOneValidExpression)
-    end
+    {GetParse ValidExpressions}
 end
 
 fun {Defns DefnsList}
@@ -387,11 +431,13 @@ end
 %% /////////////////////////////////////////////////////////////////////////
 
 
-local Main = {Str2Lst "foo ( 1 * 2 ) + 3"}
-    Foo = {Str2Lst "fun foo x = var y = x * x + x in y + y * y"}
+local Main = {Str2Lst "var y = foo ( 3 * 2 ) var z = 4 * 5 in y * 2 / z"}
+    Main2 = {Str2Lst "4 * 2"}
+    Foo = {Str2Lst "fun foo x = x * 2 "}
     Foo2 = {Str2Lst "fun foo2 x = var y = 2 * 5 in y / x"}
 in
     {Browse {SC Main}}
+    {Browse {SC Main2}}
     {Browse {SC Foo}}
     {Browse {SC Foo2}}
 end
