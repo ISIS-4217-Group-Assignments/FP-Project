@@ -432,7 +432,7 @@ end
 
 
 local Main = {Str2Lst "var y = foo ( 3 * 2 ) var z = 4 * 5 in y * 2 / z"}
-    Main2 = {Str2Lst "4 * 2"}
+    Main2 = {Str2Lst "foo x 1"}
     Foo = {Str2Lst "fun foo x = x * 2 "}
     Foo2 = {Str2Lst "fun foo2 x = var y = 2 * 5 in y / x"}
 in
