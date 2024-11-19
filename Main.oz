@@ -326,24 +326,27 @@ end
 
 %%  Validate output
 
-fun {IsExpr X}
+fun {IsExpr X VarList}
     case X of app(L R) then
-        {And {IsOperation L} {IsExpr R}}
+        {And {IsOperation L VarList} {IsExpr R VarList}}
     else
-        {Or {Var X} {Num X}}
+        {Or {Var X 'var'|VarList} {Num X}}
     end
 end
 
-fun {IsOperation X}
+fun {IsOperation X VarList}
     case X of app(L R) then
-        {And {IsOperation L} {IsExpr R}}
+        {And {IsOperation L VarList} {IsExpr R VarList}}
     else
-        {Var X}
+        {Var X 'fun'|VarList}
     end
 end
 
-fun {Var X}
-    case X of var(_) then true
+fun {Var X VarList}
+    case X of var(Y) then
+        case VarList of 'var'|_ then {Member Y VarList}
+        else {Not {Member Y VarList}}
+        end
     else false
     end
 end
@@ -366,6 +369,24 @@ end
 %end
 
 
+
+%% /////////////////////////////////////////////////////////////////////////
+%%
+%%  READ FILE
+%%  Search: ReadFile.oz
+%%
+%% /////////////////////////////////////////////////////////////////////////
+fun {ReadCoreFile Path}
+
+    F = {New Open.file init(name:Path flags:[read])}
+    Ls
+    Lines
+in
+    {F read(list:Ls)}
+    Lines = {String.tokens Ls &\n}
+    {Filter {Map Lines fun {$ X} {Str2Lst {List.subtract X 13}} end} fun {$ X} {Not X==nil} end}
+
+end
 %% /////////////////////////////////////////////////////////////////////////
 %%
 %%  SYNTAX FUNCTIONS DEFINITIONS
@@ -384,16 +405,32 @@ fun {SC LineList}
                 {Separate Remainder nil fun {$ X} {Not X=="="} end Before1 After1}
                 %case of After 
                 {Separate After1 nil fun {$ X} {Not X=="in"} end Before2 After2}
-                case After2 of nil then sc(name:{StringToAtom Name} args:{Map Before1 fun {$ X} {StringToAtom X} end} defns:nil body:{Expr Before2})
-                else sc(name:{StringToAtom Name} args:{Map Before1 fun {$ X} {StringToAtom X} end} defns:{Defns Before2} body:{Expr After2})
+                case After2 of nil then
+                    local ArgList = {Map Before1 fun {$ X} {StringToAtom X} end}
+                    in
+                        sc(name:{StringToAtom Name} args:ArgList defns:nil body:{Expr Before2 ArgList})
+                    end
+                else
+                    local ArgList = {Map Before1 fun {$ X} {StringToAtom X} end}
+                        DefnsList = {Defns Before2 ArgList}
+                        VarList = {Map DefnsList fun {$ X} defn(body:_ varName:Ret)=X in Ret end}
+                        VarArgList = {Append ArgList VarList}
+                    in
+                        sc(name:{StringToAtom Name} args:{Map Before1 fun {$ X} {StringToAtom X} end} defns:DefnsList body:{Expr After2 VarArgList})
+                    end
                 end
             end
         else
             local Before After
             in
                 {Separate LineList nil fun {$ X} {Not X=="in"} end Before After}
-                case After of nil then sc(name:'--MAIN--' args:nil defns:nil body:{Expr Before})
-                else sc(name:'--MAIN--' args:nil defns:{Defns Before} body:{Expr After})
+                case After of nil then sc(name:'--MAIN--' args:nil defns:nil body:{Expr Before nil})
+                else
+                    local DefnsList = {Defns Before nil}
+                        VarList = {Map DefnsList fun {$ X} defn(body:_ varName:Ret)=X in Ret end}
+                    in
+                        sc(name:'--MAIN--' args:nil defns:DefnsList body:{Expr After VarList})
+                    end
                 end
             end
         end
@@ -402,25 +439,24 @@ fun {SC LineList}
     end
 end
 
-
-fun {Expr ExprList}
+fun {Expr ExprList VarArgList}
     EvaluatedExprList = {PExpression {Infix2Prefix ExprList}}
-    ValidExpressions = {Filter EvaluatedExprList fun {$ Parse} parse(A B) = Parse in {And {IsExpr A} B==nil} end}
+    ValidExpressions = {Filter EvaluatedExprList fun {$ Parse} parse(A B) = Parse in {And {IsExpr A VarArgList} B==nil} end}
 in
     {GetParse ValidExpressions}
 end
 
-fun {Defns DefnsList}
+fun {Defns DefnsList ArgList}
     SeparatedDefns = {RecursiveSeparate DefnsList fun {$ X} {Not X=="var"} end nil}
 in
-    {Map SeparatedDefns fun {$ X} {Defn X} end}
+    {Map SeparatedDefns fun {$ X} {Defn X ArgList} end}
 end
 
-fun {Defn DefnList}
+fun {Defn DefnList ArgList}
     Before After
 in
     {Separate DefnList nil fun {$ X} {Not X=="="} end Before After}
-    defn(varName:{StringToAtom Before.1} body:{Expr After})
+    defn(varName:{StringToAtom Before.1} body:{Expr After ArgList})
 end
 
 %% /////////////////////////////////////////////////////////////////////////
@@ -431,13 +467,7 @@ end
 %% /////////////////////////////////////////////////////////////////////////
 
 
-local Main = {Str2Lst "var y = foo ( 3 * 2 ) var z = 4 * 5 in y * 2 / z"}
-    Main2 = {Str2Lst "foo x 1"}
-    Foo = {Str2Lst "fun foo x = x * 2 "}
-    Foo2 = {Str2Lst "fun foo2 x = var y = 2 * 5 in y / x"}
+local Program = {Map {ReadCoreFile "Main.core"} fun {$ X} {SC X} end}
 in
-    {Browse {SC Main}}
-    {Browse {SC Main2}}
-    {Browse {SC Foo}}
-    {Browse {SC Foo2}}
+    {Browse Program}
 end
