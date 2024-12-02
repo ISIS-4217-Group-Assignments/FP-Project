@@ -1,0 +1,2 @@
+fun sum6 par1 par2 par3 par4 par5 par6 = var ret = par1 + par2 + par3 + par4 + par5 + par6 in ret
+sum6 1 2 3 4 5 6
