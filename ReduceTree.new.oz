@@ -92,7 +92,6 @@ in
 end
 
 
-
 fun {Reduce Tree Stack SCList}
     case Tree of 
     app(L _) then
@@ -113,8 +112,8 @@ fun {Reduce Tree Stack SCList}
     else
         error
     end
- end
- 
+end
+
 
 local Tree = app(app(var(timer) num('3')) num('2'))
     TreeComplex = app(app(var('/') app(app(var('*') num('5')) num('2'))) app(app(var('-') app(app(var('*') num('2')) num('10'))) num('6')))

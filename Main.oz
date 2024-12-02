@@ -127,6 +127,17 @@ fun {Satisfies TheList Cond}
     end
 end
 
+fun {IndexSatisfies TheList Cond State}
+    case TheList of H|T then
+        if {Cond H} then State
+        else
+            {IndexSatisfies T Cond State+1}
+        end
+    else
+        ~1
+    end
+end
+
 
 %% //////////////////////////////////////////////////////////////
 %%
@@ -488,6 +499,69 @@ in
     defn(varName:{StringToAtom Before.1} body:{Expr After ArgList nil})
 end
 
+
+%% //////////////////////////////////////////////////////////////////////////
+%%
+%%  TREE REDUCTION
+%%  Search: ReduceTree.oz
+%%
+%% //////////////////////////////////////////////////////////////////////////
+fun {ReplaceParameters Tree Stack ParameterList SCList}
+    case Tree of app(L R) then app({ReplaceParameters L Stack ParameterList SCList} {ReplaceParameters R Stack ParameterList SCList})
+    [] var(Name) then
+        local Position = {IndexSatisfies ParameterList fun {$ X} Name==X end 1}
+
+        in
+            if Position>=1 then {Nth Stack Position}.2 
+            else
+                Tree
+            end
+        end
+    else
+        Tree
+    end
+end
+
+fun {BinopOperation Stack Op SCList}
+    First = {Reduce {Nth Stack 1}.2 nil SCList}
+    Second = {Reduce {Nth Stack 2}.2 nil SCList}
+in
+    if {Or First==error Second==error} then {Browse error} error
+    else
+        local num(FParameter) = First
+            num(SParameter) = Second
+            FirstParameter = {StringToFloat {AtomToString FParameter}}
+            SecondParameter = {StringToFloat {AtomToString SParameter}}
+        in
+            case Op of '/' then num({StringToAtom {FloatToString FirstParameter/SecondParameter}})
+            else
+                num({StringToAtom {FloatToString {Number.Op FirstParameter SecondParameter}}})
+            end
+        end
+    end
+end
+
+fun {Reduce Tree Stack SCList}
+    case Tree of 
+    app(L _) then
+        {Reduce L Tree|Stack SCList}
+    [] var(Op) then 
+        if {Member Op {Map BINOP fun {$ X} {StringToAtom X} end}} then
+            %{Browse Stack}
+            {BinopOperation Stack Op SCList}
+        else
+            local
+                SCContent = {Satisfies SCList fun {$ X} X.name==Op end}
+                SCBody = SCContent.body.1
+            in
+                {Reduce {ReplaceParameters SCBody Stack SCContent.args SCList} nil SCList}
+            end
+        end
+    [] num(_) then Tree
+    else
+        error
+    end
+end
 %% /////////////////////////////////////////////////////////////////////////
 %%
 %%  MAIN EXECUTION
@@ -496,8 +570,13 @@ end
 %% /////////////////////////////////////////////////////////////////////////
 
 
+{Browse hola}
+
 local MemoryCell = {NewCell nil}
-    {ForAll {ReadCoreFile "Main.core"} proc {$ X} {SC X MemoryCell} end}
+    {ForAll {ReadCoreFile "examples/fourtimes.core"} proc {$ X} {SC X MemoryCell} end}
+    Main = {Filter @MemoryCell fun {$ X} X.name=='--MAIN--' end}.1.body.1
 in
     {Browse @MemoryCell}
+    {Browse {Reduce Main nil @MemoryCell}.1}
+
 end
