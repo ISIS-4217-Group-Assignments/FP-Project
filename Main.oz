@@ -570,7 +570,7 @@ end
 %% /////////////////////////////////////////////////////////////////////////
 
 
-{Browse hola}
+{Browse enters}
 
 local MemoryCell = {NewCell nil}
     {ForAll {ReadCoreFile "examples/fourtimes.core"} proc {$ X} {SC X MemoryCell} end}
@@ -580,3 +580,5 @@ in
     {Browse {Reduce Main nil @MemoryCell}.1}
 
 end
+
+{Browse exits}
