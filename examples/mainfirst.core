@@ -1,0 +1,2 @@
+foo 10 4
+fun foo x y = x * y / 2
