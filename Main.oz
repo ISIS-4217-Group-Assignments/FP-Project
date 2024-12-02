@@ -116,6 +116,28 @@ fun {Infix2Prefix Data}
     end
 end
 
+fun {Satisfies TheList Cond}
+    case TheList of H|T then
+        if {Cond H} then H
+        else
+            {Satisfies T Cond}
+        end
+    else
+        nil
+    end
+end
+
+fun {IndexSatisfies TheList Cond State}
+    case TheList of H|T then
+        if {Cond H} then State
+        else
+            {IndexSatisfies T Cond State+1}
+        end
+    else
+        ~1
+    end
+end
+
 
 %% //////////////////////////////////////////////////////////////
 %%
@@ -358,6 +380,22 @@ fun {Num X}
 end
 
 
+fun {ReplaceVarWithDefn Tree DefnList}
+    case Tree of app(L R) then app({ReplaceVarWithDefn L DefnList} {ReplaceVarWithDefn R DefnList})
+    [] var(Name) then
+        local VarDefn = {Satisfies DefnList fun {$ X} X.varName==Name end}
+        in
+            if VarDefn == nil then Tree
+            else
+                VarDefn.body.1
+            end
+        end
+    else
+        Tree
+    end
+end
+
+
 %% LOCAL SCOPE TO TEST PARSING LIBRARY
 %local Tokens1 = ["+" "foo" "*" "1" "2" "3"]
 %    Parses = {PExpression Tokens1}
@@ -395,7 +433,7 @@ end
 %% /////////////////////////////////////////////////////////////////////////
 
 
-fun {SC LineList}
+proc {SC LineList MemoryCell}
     case LineList of H|T then
         if H == "fun" then
             local Name|Remainder = T
@@ -408,7 +446,8 @@ fun {SC LineList}
                 case After2 of nil then
                     local ArgList = {Map Before1 fun {$ X} {StringToAtom X} end}
                     in
-                        sc(name:{StringToAtom Name} args:ArgList defns:nil body:{Expr Before2 ArgList})
+                        %MemoryCell := sc(name:{StringToAtom Name} args:ArgList body:{Expr Before2 ArgList nil}) | nil
+                        MemoryCell := {Append @MemoryCell sc(name:{StringToAtom Name} args:ArgList body:{Expr Before2 ArgList nil})|nil}
                     end
                 else
                     local ArgList = {Map Before1 fun {$ X} {StringToAtom X} end}
@@ -416,7 +455,8 @@ fun {SC LineList}
                         VarList = {Map DefnsList fun {$ X} defn(body:_ varName:Ret)=X in Ret end}
                         VarArgList = {Append ArgList VarList}
                     in
-                        sc(name:{StringToAtom Name} args:{Map Before1 fun {$ X} {StringToAtom X} end} defns:DefnsList body:{Expr After2 VarArgList})
+                        %MemoryCell := sc(name:{StringToAtom Name} args:{Map Before1 fun {$ X} {StringToAtom X} end} body:{Expr After2 VarArgList DefnsList}) | nil
+                        MemoryCell := {Append @MemoryCell sc(name:{StringToAtom Name} args:{Map Before1 fun {$ X} {StringToAtom X} end} body:{Expr After2 VarArgList DefnsList})|nil}
                     end
                 end
             end
@@ -424,26 +464,26 @@ fun {SC LineList}
             local Before After
             in
                 {Separate LineList nil fun {$ X} {Not X=="in"} end Before After}
-                case After of nil then sc(name:'--MAIN--' args:nil defns:nil body:{Expr Before nil})
+                case After of nil then MemoryCell := {Append @MemoryCell sc(name:'--MAIN--' args:nil body:{Expr Before nil nil})|nil}
                 else
                     local DefnsList = {Defns Before nil}
                         VarList = {Map DefnsList fun {$ X} defn(body:_ varName:Ret)=X in Ret end}
                     in
-                        sc(name:'--MAIN--' args:nil defns:DefnsList body:{Expr After VarList})
+                        MemoryCell := {Append @MemoryCell sc(name:'--MAIN--' args:nil body:{Expr After VarList DefnsList})|nil}
                     end
                 end
             end
         end
     else
-        sc(name:nil args:nil body:nil)
+        MemoryCell := sc(name:nil args:nil body:nil) | @MemoryCell
     end
 end
 
-fun {Expr ExprList VarArgList}
-    EvaluatedExprList = {PExpression {Infix2Prefix ExprList}}
+fun {Expr ExprList VarArgList DefnList}
+    EvaluatedExprList = {PExpression {Infix2Prefix ExprList}} 
     ValidExpressions = {Filter EvaluatedExprList fun {$ Parse} parse(A B) = Parse in {And {IsExpr A VarArgList} B==nil} end}
 in
-    {GetParse ValidExpressions}
+    {Map {GetParse ValidExpressions} fun {$ X} {ReplaceVarWithDefn X DefnList} end}
 end
 
 fun {Defns DefnsList ArgList}
@@ -456,9 +496,72 @@ fun {Defn DefnList ArgList}
     Before After
 in
     {Separate DefnList nil fun {$ X} {Not X=="="} end Before After}
-    defn(varName:{StringToAtom Before.1} body:{Expr After ArgList})
+    defn(varName:{StringToAtom Before.1} body:{Expr After ArgList nil})
 end
 
+
+%% //////////////////////////////////////////////////////////////////////////
+%%
+%%  TREE REDUCTION
+%%  Search: ReduceTree.oz
+%%
+%% //////////////////////////////////////////////////////////////////////////
+fun {ReplaceParameters Tree Stack ParameterList SCList}
+    case Tree of app(L R) then app({ReplaceParameters L Stack ParameterList SCList} {ReplaceParameters R Stack ParameterList SCList})
+    [] var(Name) then
+        local Position = {IndexSatisfies ParameterList fun {$ X} Name==X end 1}
+
+        in
+            if Position>=1 then {Nth Stack Position}.2 
+            else
+                Tree
+            end
+        end
+    else
+        Tree
+    end
+end
+
+fun {BinopOperation Stack Op SCList}
+    First = {Reduce {Nth Stack 1}.2 nil SCList}
+    Second = {Reduce {Nth Stack 2}.2 nil SCList}
+in
+    if {Or First==error Second==error} then {Browse error} error
+    else
+        local num(FParameter) = First
+            num(SParameter) = Second
+            FirstParameter = {StringToFloat {AtomToString FParameter}}
+            SecondParameter = {StringToFloat {AtomToString SParameter}}
+        in
+            case Op of '/' then num({StringToAtom {FloatToString FirstParameter/SecondParameter}})
+            else
+                num({StringToAtom {FloatToString {Number.Op FirstParameter SecondParameter}}})
+            end
+        end
+    end
+end
+
+fun {Reduce Tree Stack SCList}
+    case Tree of 
+    app(L _) then
+        {Reduce L Tree|Stack SCList}
+    [] var(Op) then 
+        if {Member Op {Map BINOP fun {$ X} {StringToAtom X} end}} then
+            %{Browse Stack}
+            {BinopOperation Stack Op SCList}
+        else
+            local
+                SCContent = {Satisfies SCList fun {$ X} X.name==Op end}
+                SCBody = SCContent.body.1
+            in
+                {Reduce {ReplaceParameters SCBody Stack SCContent.args SCList} nil SCList}
+            end
+        end
+    [] num(_) then Tree
+    else
+        error
+    end
+end
 %% /////////////////////////////////////////////////////////////////////////
 %%
 %%  MAIN EXECUTION
@@ -467,7 +570,15 @@ end
 %% /////////////////////////////////////////////////////////////////////////
 
 
-local Program = {Map {ReadCoreFile "Main.core"} fun {$ X} {SC X} end}
+{Browse enters}
+
+local MemoryCell = {NewCell nil}
+    {ForAll {ReadCoreFile "examples/fourtimes.core"} proc {$ X} {SC X MemoryCell} end}
+    Main = {Filter @MemoryCell fun {$ X} X.name=='--MAIN--' end}.1.body.1
 in
-    {Browse Program}
+    {Browse @MemoryCell}
+    {Browse {Reduce Main nil @MemoryCell}.1}
+
 end
+
+{Browse exits}
