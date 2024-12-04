@@ -19,6 +19,7 @@ $$
     & defn \Rightarrow\ \text{var} \ var = \text{expr} \\
     & binop \Rightarrow\ + \mid - \mid * \mid / \\
     & var \Rightarrow\ \alpha \ varch_1 \ \dots \ varch_n \quad n \geq 0 \\
+    & \alpha \Rightarrow\ an alphabetic character \\
 \end{aligned}
 $$
 
