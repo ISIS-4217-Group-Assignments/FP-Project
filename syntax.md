@@ -4,25 +4,26 @@ In the following syntax definition notation, a simple way to denote that an expr
 
 $$
 \begin{aligned}
-    & \text{program} \Rightarrow sc_1;\ sc_2;\ sc_3;\ ...\ sc_n \quad n \geq 1 \\
+    & \text{program} \Rightarrow sc_1; \ sc_2; \ sc_3; \ \dots ; \ sc_n \quad n \geq 1 \\
     & sc \Rightarrow\ \text{expr} \\
     & \hspace{10mm} \text{defns in expr} \\
-    & \hspace{10mm} \text{fun } var\ var_1\ ...\ var_n = \text{expr} \quad n \geq 1 \\
-    & \hspace{10mm} \text{fun } var\ var_1\ ...\ var_n = \text{defns in expr} \quad n \geq 1 \\
-    & expr \Rightarrow\ expr\ aexpr \\
-    & \hspace{10mm} expr_1\ binop\ expr_2 \\
+    & \hspace{10mm} \text{fun } var \ var_1 \ \dots \ var_n = \text{expr} \quad n \geq 1 \\
+    & \hspace{10mm} \text{fun } var \ var_1 \ \dots \ var_n = \text{defns in expr} \quad n \geq 1 \\
+    & expr \Rightarrow\ expr \ aexpr \\
+    & \hspace{10mm} expr_{1} \ binop \ expr_{2} \\
     & \hspace{10mm} aexpr \\
     & aexpr \Rightarrow\ var \\
     & \hspace{10mm} num \\
     & \hspace{10mm} (\text{expr}) \\
-    & defns \Rightarrow\ defn_1;\ ...\ ;\ defn_n \quad n \geq 1 \\
-    & defn \Rightarrow\ \text{var}\ var = \text{expr} \\
+    & defns \Rightarrow\ defn_1; \ \dots ; \ defn_n \quad n \geq 1 \\
+    & defn \Rightarrow\ \text{var} \ var = \text{expr} \\
     & binop \Rightarrow\ + \mid - \mid * \mid / \\
-    & var \Rightarrow\ \alpha\ varch_1\ ...\ varch_n \quad n \geq 0 \\
+    & var \Rightarrow\ \alpha \ varch_1 \ \dots \ varch_n \quad n \geq 0 \\
     & \alpha \Rightarrow\ \text{an alphabetic character} \\
     & varch \Rightarrow\ \alpha \mid \text{a digit} \mid \_ \\
 \end{aligned}
 $$
+
 
 Something that may or may not come in handy is the file `infix2prefix.oz`, where the function `Infix2Prefix` defines transformations so that an infix expression can be transformed into a prefixed form, and removes all the parentheses. This helps isolate an expression so that it can be worked with more easily. In this new space after the function, the syntax rules will be the following:
 
