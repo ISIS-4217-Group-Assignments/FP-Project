@@ -5,22 +5,6 @@ In the following syntax definition notation, a simple way to denote that an expr
 $$
 \begin{aligned}
     & program \Rightarrow sc_1; \ sc_2; \ sc_3; \ \dots ; \ sc_n \quad n \geq 1 \\
-    & sc \Rightarrow\ \text{expr} \\
-    & \hspace{10mm} \text{defns in expr} \\
-    & \hspace{10mm} \text{fun } var \ var_1 \ \dots \ var_n = \text{expr} \quad n \geq 1 \\
-    & \hspace{10mm} \text{fun } var \ var_1 \ \dots \ var_n = \text{defns in expr} \quad n \geq 1 \\
-    & expr \Rightarrow\ expr \ aexpr \\
-    & \hspace{10mm} expr_{1} \ binop \ expr_{2} \\
-    & \hspace{10mm} aexpr \\
-    & aexpr \Rightarrow\ var \\
-    & \hspace{10mm} num \\
-    & \hspace{10mm} (\text{expr}) \\
-    & defns \Rightarrow\ defn_1; \ \dots ; \ defn_n \quad n \geq 1 \\
-    & defn \Rightarrow\ \text{var} \ var = \text{expr} \\
-    & binop \Rightarrow\ + \mid - \mid * \mid / \\
-    & var \Rightarrow\ \alpha \ varch_1 \ \dots \ varch_n \quad n \geq 0 \\
-    & \alpha \Rightarrow\ \text{an alphabetic character} \\
-    & varch \Rightarrow\ \alpha \mid \text{a digit} \mid \_ \\
 \end{aligned}
 $$
 
