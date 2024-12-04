@@ -9,6 +9,12 @@ $$
     & \hspace{10mm} \text{defns in expr} \\
     & \hspace{10mm} \text{fun } var \ var_1 \ \dots \ var_n = \text{expr} \quad n \geq 1 \\
     & \hspace{10mm} \text{fun } var \ var_1 \ \dots \ var_n = \text{defns in expr} \quad n \geq 1 \\
+    & expr \Rightarrow\ expr \ aexpr \\
+    & \hspace{10mm} expr_{1} \ binop \ expr_{2} \\
+    & \hspace{10mm} aexpr \\
+    & aexpr \Rightarrow\ var \\
+    & \hspace{10mm} num \\
+    & \hspace{10mm} (\text{expr}) \\
 \end{aligned}
 $$
 
