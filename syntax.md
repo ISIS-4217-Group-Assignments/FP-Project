@@ -20,7 +20,7 @@ $$
     & binop \Rightarrow\ + \mid - \mid * \mid / \\
     & var \Rightarrow\ \alpha \ varch_1 \ \dots \ varch_n \quad n \geq 0 \\
     & \alpha \Rightarrow\ [a-zA-Z] \\
-    & varch \Rightarrow\ \alpha \mid a digit \mid \\
+    & varch \Rightarrow\ \alpha \mid a digit \mid \__ \\
 \end{aligned}
 $$
 
