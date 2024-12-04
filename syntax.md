@@ -15,6 +15,12 @@ $$
     & aexpr \Rightarrow\ var \\
     & \hspace{10mm} num \\
     & \hspace{10mm} (\text{expr}) \\
+    & defns \Rightarrow\ defn_1; \ \dots ; \ defn_n \quad n \geq 1 \\
+    & defn \Rightarrow\ \text{var} \ var = \text{expr} \\
+    & binop \Rightarrow\ + \mid - \mid * \mid / \\
+    & var \Rightarrow\ \alpha \ varch_1 \ \dots \ varch_n \quad n \geq 0 \\
+    & \alpha \Rightarrow\ an alphabetic character \\
+    & varch \Rightarrow\ \alpha \mid \text{a digit} \mid \_ \\
 \end{aligned}
 $$
 
