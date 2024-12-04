@@ -2,7 +2,6 @@
 
 In the following syntax definition notation, a simple way to denote that an expression could be something or something, the notation $A \Rightarrow B \mid C$ means that $A$ can be reduced to either $B$ or $C$, but not both.
 
-```latex
 $$
 \begin{aligned}
     & \text{program} \Rightarrow sc_1; \ sc_2; \ sc_3; \ \dots ; \ sc_n \quad n \geq 1 \\
