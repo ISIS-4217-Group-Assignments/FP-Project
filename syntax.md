@@ -4,7 +4,7 @@ In the following syntax definition notation, a simple way to denote that an expr
 
 $$
 \begin{aligned}
-    & \text{program} \Rightarrow sc_1; \ sc_2; \ sc_3; \ \dots ; \ sc_n \quad n \geq 1 \\
+    & program \Rightarrow sc_1; \ sc_2; \ sc_3; \ \dots ; \ sc_n \quad n \geq 1 \\
     & sc \Rightarrow\ \text{expr} \\
     & \hspace{10mm} \text{defns in expr} \\
     & \hspace{10mm} \text{fun } var \ var_1 \ \dots \ var_n = \text{expr} \quad n \geq 1 \\
