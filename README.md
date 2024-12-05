@@ -50,6 +50,10 @@ sc(name:'--MAIN--' body:[...] parameters:nil)
 
 where the first one is the supercombinator in the example is a function definition, and the second is for the main execution of a file. Notice how in the main supercombinator, parameters is an empty list while in a function is a list. This list contains the name of the parameters later used in the body.
 
-The contents of body is a list containing records that represent the evaluation tree. It was designed as a tree due to the inherit non-determinism of parsing an array of tokens. Either way, the tree is generated and stored in the body record. Furthermore, notice how the variable declaration is not stored. This is because, when generating the tree, the variables names are replaced by the definition of said variable.
+The contents of body is a list containing records that represent the evaluation tree. It was designed as a list due to the inherit non-determinism of parsing an array of tokens. Either way, the tree is generated and stored in the body record. Furthermore, notice how variable declaration is not stored. This is because, when generating the tree, the variables names are replaced by the definition of said variable. This means, that a new tree is put where a variable should be called. This only happens when parsing varaibles names and not function names.  
+
+At last, the way that the evaluation works is that it first starts from the top of the tree reading the name of the record. if it is an app node, it then repeats the process recursively for the left child until it finds a variable name. It asks if the atom stored in the var node is either an atom of a primal operation or a function name. If its a primal operation, it then takes the first two expressions from a stack. These expressions being the right children of the parent and grandparents of the leaf node being analized. These expressions are also reduced used the same procedure.
+
+In the case of a function call, the evaluation first asks how many parameters the function takes, and repeats the same process described previously. However the main diference is that, first, the expression tree, or part of it, is reeplaced with the body of the function. And all calls to the parameters are replaced by the expressiont whose position it represents.
 
 
